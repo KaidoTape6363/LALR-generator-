@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LALR Slide Builder</title>
+<meta name="theme-color" content="#B3261E">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚒</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <div>
+      <h1>LALR Slide Builder</h1>
+      <p>Fill in the call, add the photos, download the deck.</p>
+    </div>
+  </div>
+  <button class="ghost small" id="btnReset" type="button">New report</button>
+</header>
+
+<main>
+  <!-- 1. REPORT TYPE -->
+  <section class="step" id="s-type">
+    <h2><span class="num">1</span>Report type</h2>
+    <div class="types" id="typeTiles" role="radiogroup" aria-label="Report type"></div>
+    <div class="row" id="caseTypeRow" hidden>
+      <label class="f"><span>Case type</span>
+        <select data-bind="caseType">
+          <option>Fire Minor (Rubbish)</option>
+          <option selected>Fire Investigation</option>
+          <option>Oil Spillage</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <!-- 2. INCIDENT -->
+  <section class="step" id="s-incident">
+    <h2><span class="num">2</span>Incident details</h2>
+    <div class="grid">
+      <label class="f"><span>Dispatched date</span><input type="date" data-bind="dispDate"></label>
+      <label class="f"><span>ACES incident no.</span><input data-bind="incidentNo" placeholder="20260218/1106" autocomplete="off"></label>
+      <label class="f"><span>Dispatched time</span><input class="time" data-bind="dispTime" placeholder="17:30:01" inputmode="numeric"></label>
+      <label class="f"><span>Arrival time (ACES)</span><input class="time" data-bind="arrTime" placeholder="17:40:15" inputmode="numeric"></label>
+      <label class="f"><span>Enroute time (ACES)</span><input class="time" data-bind="enrouteTime" placeholder="17:30:44" inputmode="numeric"><small>Used to work out activation time</small></label>
+      <label class="f"><span>Appliance dispatched</span><input data-bind="appliance" list="applList" placeholder="PL442E" autocapitalize="characters" autocomplete="off"></label>
+      <label class="f"><span>Incident type</span><input data-bind="incidentType" list="incTypeList" placeholder="Fire MINOR" autocomplete="off"></label>
+      <label class="f"><span>Location</span><input data-bind="location" placeholder="406 CHOA CHU KANG AVE 3" autocomplete="off"></label>
+      <label class="f"><span>Response zone</span>
+        <select data-bind="boundary">
+          <option>8 Min Boundary</option><option>11 Min Boundary</option><option>15 Min Boundary</option><option>OOB</option>
+        </select>
+      </label>
+      <label class="f"><span>Station / post</span><input data-bind="station" list="stationList" placeholder="BBFS" autocapitalize="characters" autocomplete="off"></label>
+      <label class="f"><span>Vehicle commander</span><input data-bind="comd" placeholder="WO2 SYAFIQ" autocomplete="off"></label>
+      <label class="f"><span>Pump operator</span><input data-bind="pumpOp" placeholder="SGT3 MUHAMMAD" autocomplete="off"></label>
+    </div>
+    <div class="calc" id="calcIncident" aria-live="polite"></div>
+  </section>
+
+  <!-- 3. ROUTE & JUSTIFICATIONS -->
+  <section class="step" id="s-route">
+    <h2><span class="num">3</span>Route and justifications</h2>
+    <div class="counter">
+      <div>
+        <strong>SFTLs encountered</strong>
+        <small id="sftlHint">Sets the SFTL markers on the map and the red/green photo pairs you need.</small>
+      </div>
+      <div class="stepper">
+        <button type="button" data-step="sftl" data-d="-1" aria-label="Fewer SFTLs">−</button>
+        <output id="sftlCount">0</output>
+        <button type="button" data-step="sftl" data-d="1" aria-label="More SFTLs">+</button>
+      </div>
+    </div>
+    <div id="sftlList" class="sftl-list"></div>
+
+    <div class="grid j">
+      <label class="f"><span>Traffic congestion (count)</span><input type="number" min="0" max="9" data-bind="congestion" data-num inputmode="numeric"></label>
+      <label class="f"><span>Congestion remark (optional)</span><input data-bind="congestionRemark" placeholder="1 x Traffic Congestion"></label>
+      <label class="f"><span>Inclement weather</span><select data-bind="weather.yn"><option>N</option><option>Y</option></select></label>
+      <label class="f"><span>Weather remark</span><input data-bind="weather.remark" placeholder="Heavy rain"></label>
+      <label class="f"><span>ACES route deviation?</span><select data-bind="deviation.yn"><option>N</option><option>Y</option></select></label>
+      <label class="f"><span>Deviation remark</span><input data-bind="deviation.remark" placeholder="Road closure at …"></label>
+    </div>
+
+    <label class="f wide">
+      <span>Remarks line <button type="button" class="link" id="btnAutoRemark" hidden>Use auto wording</button></span>
+      <textarea data-bind="remarks" rows="2" id="remarksBox"></textarea>
+      <small>Written for you from the times above. Edit it if you need different wording.</small>
+    </label>
+    <div class="preview-text" id="othersPreview"></div>
+  </section>
+
+  <!-- 4. MAP -->
+  <section class="step" id="s-map">
+    <h2><span class="num">4</span>Map with response boundary</h2>
+    <ol class="howto">
+      <li>Open the boundary map, pan to the incident and take a screenshot with the pink boundary in view.</li>
+      <li>Upload it below, then draw the route and place the markers.</li>
+    </ol>
+    <div class="map-actions">
+      <a class="btn ghost" id="lnkMap" target="_blank" rel="noopener">Open boundary map</a>
+      <button type="button" class="ghost" id="btnShowEmbed">Show map on this page</button>
+      <label class="btn primary file">Upload map screenshot<input type="file" accept="image/*" id="mapFile"></label>
+    </div>
+    <div id="embedWrap" class="embed" hidden>
+      <iframe id="mapEmbed" title="Response boundary map" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div class="embed-bar">
+        <span>Pan and zoom to the incident, then capture.</span>
+        <button type="button" class="primary small" id="btnCapture">Capture this view</button>
+      </div>
+    </div>
+
+    <div id="editor" class="editor" hidden>
+      <div class="tools" role="toolbar" aria-label="Map tools">
+        <div class="tgroup">
+          <button type="button" data-tool="pan" class="on" title="Drag to move the map">Move map</button>
+          <button type="button" data-zoom="1.15" title="Zoom in" aria-label="Zoom in">+</button>
+          <button type="button" data-zoom="0.87" title="Zoom out" aria-label="Zoom out">−</button>
+        </div>
+        <div class="tgroup">
+          <button type="button" data-tool="route"><i class="sw g"></i>Route</button>
+          <button type="button" data-tool="cong"><i class="sw r"></i>Congestion</button>
+        </div>
+        <div class="tgroup">
+          <button type="button" data-tool="origin"><i class="ic origin"></i>Responded from</button>
+          <button type="button" data-tool="incident"><i class="ic incident"></i>Incident</button>
+          <button type="button" data-tool="sftl" id="toolSftl"><i class="ic tl"></i><span>SFTL</span></button>
+          <button type="button" data-tool="label"><i class="ic lbl"></i>Zone label</button>
+        </div>
+        <div class="tgroup">
+          <button type="button" data-tool="select" title="Drag markers and SFTL boxes">Adjust</button>
+          <button type="button" data-tool="erase" title="Tap a marker or line to remove it">Erase</button>
+          <button type="button" id="btnUndo">Undo</button>
+          <button type="button" id="btnFull" class="only-touch">Full screen</button>
+        </div>
+      </div>
+      <div class="canvas-wrap"><canvas id="mapCanvas" width="2100" height="684"></canvas></div>
+      <p class="tool-hint" id="toolHint">Drag to position the map inside the slide frame.</p>
+    </div>
+  </section>
+
+  <!-- 5. PHOTOS -->
+  <section class="step" id="s-photos">
+    <h2><span class="num">5</span>Photos</h2>
+    <p class="lead" id="photoLead"></p>
+    <div id="slots" class="slots"></div>
+  </section>
+
+  <!-- 6. DOWNLOAD -->
+  <section class="step" id="s-done">
+    <h2><span class="num">6</span>Check and download</h2>
+    <div id="deckSummary" class="summary"></div>
+    <div id="missing" class="missing"></div>
+  </section>
+</main>
+
+<footer class="dock">
+  <div class="dock-status" id="dockStatus"></div>
+  <div class="dock-actions">
+    <button type="button" class="ghost" id="btnShare" hidden>Share</button>
+    <button type="button" class="primary" id="btnDownload">Download deck</button>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<datalist id="applList"><option>PL441</option><option>PL442</option><option>PL441E</option><option>PL442E</option><option>LF441</option><option>LF441E</option><option>LF442E</option><option>LF443E</option></datalist>
+<datalist id="stationList"><option>BBFS</option><option>S44</option><option>BPFP</option></datalist>
+<datalist id="incTypeList"><option>Fire MINOR</option><option>F - Motor Vehicle</option><option>F - Investigation</option><option>F - Rubbish</option><option>R - Lock Door</option><option>R - Height Rescue</option><option>R - Lift Rescue</option><option>Oil Spillage</option></datalist>
+
+<script src="vendor/pptxgen.bundle.js"></script>
+<script src="deck.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
